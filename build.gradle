@@ -1,0 +1,73 @@
+plugins {
+    id 'maven-publish'
+}
+
+group 'com.letscoding.batch-dependencies'
+
+repositories {
+    mavenLocal()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+
+            pom {
+                name = 'Lets Coding Batch Dependency'
+                description = 'Lets Coding Batch Dependency'
+                packaging = 'pom'
+
+                withXml {
+                    def xml = asNode()
+
+                    xml.children().last() + {
+                        def xmlItem = delegate
+
+                        xmlItem.properties {
+                            // Versions
+                            File versionsFile = new File("$projectDir/src/main/resources/versions")
+                            versionsFile.eachLine { line ->
+                                def propertyDetails = line.split('=')
+                                if( propertyDetails.size() == 2 ) {
+                                    xmlItem."${propertyDetails[0]}" "${propertyDetails[1]}"
+                                }
+                            }
+                        }
+
+                        xmlItem.dependencyManagement {
+                            xmlItem.dependencies {
+                                // BOM imports
+                                File bomVersionsFile = new File("$projectDir/src/main/resources/bom.versions")
+                                bomVersionsFile.eachLine { line ->
+                                    def dependencyDetails = line.split(':')
+                                    if( dependencyDetails.size() == 3 ) {
+                                        xmlItem.dependency {
+                                            xmlItem.groupId dependencyDetails[0]
+                                            xmlItem.artifactId dependencyDetails[1]
+                                            xmlItem.version dependencyDetails[2]
+                                            xmlItem.type 'pom'
+                                            xmlItem.scope 'import'
+                                        }
+                                    }
+                                }
+
+                                // Dependency imports
+                                File dependencyVersionsFile = new File("$projectDir/src/main/resources/dependency.versions")
+                                dependencyVersionsFile.eachLine { line ->
+                                    def dependencyDetails = line.split(':')
+                                    if( dependencyDetails.size() == 3 ) {
+                                        xmlItem.dependency {
+                                            xmlItem.groupId dependencyDetails[0]
+                                            xmlItem.artifactId dependencyDetails[1]
+                                            xmlItem.version dependencyDetails[2]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
